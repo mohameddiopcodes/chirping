@@ -9,6 +9,7 @@ import { User } from "@clerk/nextjs/dist/api";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
+import { Loading } from "@/components/Loading";
 
 dayjs.extend(relativeTime);
 
@@ -60,13 +61,29 @@ const Avatar = ({ url }: { url: string }) => (
   />
 );
 
+const Feed = () => {
+  const { data, isLoading: postsLoaded } = api.posts.getAll.useQuery();
+
+  if (postsLoaded) return <Loading />;
+
+  if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div className="flex flex-col">
+      {data.map(({ post, author }) => (
+        <PostView key={post.id} data={{ post, author }} />
+      ))}
+    </div>
+  );
+};
+
 const Home: NextPage = () => {
-  const user = useUser();
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
 
-  const { data, isLoading } = api.posts.getAll.useQuery();
+  //start fetching posts
+  api.posts.getAll.useQuery();
 
-  if (!data || isLoading) return <div>Loading...</div>;
-
+  if (!userLoaded) return <div></div>;
   return (
     <>
       <Head>
@@ -77,12 +94,10 @@ const Home: NextPage = () => {
       <main className="flex justify-center">
         <div className="h-screen w-full border-x border-slate-400 md:max-w-2xl">
           <div className="flex border-b border-slate-400 p-4">
-            {!user.isSignedIn ? <SignInButton /> : <CreatePost />}
+            {!isSignedIn ? <SignInButton /> : <CreatePost />}
           </div>
           <div className="flex flex-col">
-            {data.map(({ post, author }) => (
-              <PostView key={post.id} data={{ post, author }} />
-            ))}
+            <Feed />
           </div>
         </div>
       </main>
