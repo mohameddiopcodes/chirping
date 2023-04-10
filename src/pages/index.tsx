@@ -10,11 +10,23 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
 import { Loading } from "@/components/Loading";
+import { useState } from "react";
 
 dayjs.extend(relativeTime);
 
 const CreatePost = () => {
   const { user: author } = useUser();
+
+  const [input, setInput] = useState("");
+  const ctx = api.useContext();
+
+  const { mutate: createPost, isLoading: postLoading } =
+    api.posts.create.useMutation({
+      onSuccess: () => {
+        setInput("");
+        void ctx.posts.getAll.invalidate();
+      },
+    });
 
   if (!author) return null;
 
@@ -24,7 +36,11 @@ const CreatePost = () => {
       <input
         placeholder="Type some emojis!"
         className="grow bg-transparent outline-none"
+        type="text"
+        onChange={(e) => setInput((e.target as HTMLInputElement).value)}
+        disabled={postLoading}
       />
+      <button onClick={() => createPost({ content: input })}>POST</button>
     </div>
   );
 };
