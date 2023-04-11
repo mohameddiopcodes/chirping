@@ -11,6 +11,8 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import Image from "next/image";
 import { Loading } from "@/components/Loading";
 import { useState } from "react";
+import toast from "react-hot-toast";
+import Link from "next/link";
 
 dayjs.extend(relativeTime);
 
@@ -26,6 +28,14 @@ const CreatePost = () => {
         setInput("");
         void utils.posts.getAll.invalidate();
       },
+      onError: (e) => {
+        const message = e.shape
+          ? [e.shape.message]
+          : e.data?.zodError?.fieldErrors.content;
+        if (message && message[0]) {
+          toast.error(`${message[0]} 😡`);
+        }
+      },
     });
 
   if (!author) return null;
@@ -37,15 +47,31 @@ const CreatePost = () => {
         placeholder="Type some emojis!"
         className="grow bg-transparent outline-none"
         type="text"
+        value={input}
         onChange={(e) => setInput((e.target as HTMLInputElement).value)}
+        onKeyDown={(e) => {
+          e.key === "Enter" && input !== "" && createPost({ content: input });
+        }}
         disabled={postLoading}
       />
-      <button onClick={() => createPost({ content: input })}>POST</button>
+      {input !== "" && !postLoading && (
+        <button
+          disabled={postLoading}
+          onClick={() => createPost({ content: input })}
+        >
+          POST
+        </button>
+      )}
+      {postLoading && (
+        <div className="relative flex h-full w-8 items-center justify-center">
+          <Loading size={8} />
+        </div>
+      )}
     </div>
   );
 };
 
-type PostWithUser = RouterOutputs["posts"]["getAll"][number];
+export type PostWithUser = RouterOutputs["posts"]["getAll"][number];
 
 const PostView = ({ data: { post, author } }: { data: PostWithUser }) => {
   return (
@@ -56,10 +82,14 @@ const PostView = ({ data: { post, author } }: { data: PostWithUser }) => {
       <Avatar url={author.profileImage} />
       <div className="flex flex-col">
         <div className="flex gap-1">
-          <span>{`${author.username}`}</span>
-          <span className="font-thin">{` · ${dayjs(
-            post.createdAt
-          ).fromNow()}`}</span>
+          <Link href={`/@${author.username}`}>
+            <span>{`@${author.username}`}</span>
+          </Link>
+          <Link href={`/posts/${post.id}`}>
+            <span className="font-thin">{` · ${dayjs(
+              post.createdAt
+            ).fromNow()}`}</span>
+          </Link>
         </div>
         <span className="text-2xl">{post.content}</span>
       </div>
@@ -78,9 +108,9 @@ const Avatar = ({ url }: { url: string }) => (
 );
 
 const Feed = () => {
-  const { data, isLoading: postsLoaded } = api.posts.getAll.useQuery();
+  const { data, isLoading: postsLoading } = api.posts.getAll.useQuery();
 
-  if (postsLoaded) return <Loading />;
+  if (postsLoading) return <Loading />;
 
   if (!data) return <div>Something went wrong</div>;
 
