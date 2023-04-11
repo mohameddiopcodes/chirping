@@ -18,13 +18,13 @@ const CreatePost = () => {
   const { user: author } = useUser();
 
   const [input, setInput] = useState("");
-  const ctx = api.useContext();
+  const utils = api.useContext();
 
   const { mutate: createPost, isLoading: postLoading } =
     api.posts.create.useMutation({
       onSuccess: () => {
         setInput("");
-        void ctx.posts.getAll.invalidate();
+        void utils.posts.getAll.invalidate();
       },
     });
 
